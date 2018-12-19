@@ -14,8 +14,6 @@ TODO
 
 // Just below are three global variables holding the actual animated stuff; Cloth and Ball 
 Cloth cloth1(8,8,10,10); // one Cloth object of the Cloth class
-Vec3 ball_pos(7,-5,0); // the center of our one ball
-float ball_radius = 2; // the radius of our one ball
 
 
 
@@ -54,20 +52,14 @@ void init(GLvoid)
 }
 
 
-float ball_time = 0; // counter for used to calculate the z position of the ball below
-
 /* display method called each frame*/
 void display(void)
 {
 	// calculating positions
 
-	ball_time++;
-	ball_pos.f[2] = cos(ball_time/50.0)*7;
-
 	cloth1.addForce(Vec3(0,-0.2,0)*TIME_STEPSIZE2); // add gravity each frame, pointing down
 	cloth1.windForce(Vec3(0.5,0,0.2)*TIME_STEPSIZE2); // generate some wind each frame
 	cloth1.timeStep(); // calculate the particle positions of the next frame
-	cloth1.ballCollision(ball_pos,ball_radius); // resolve collision with the ball
 
 
 
@@ -90,12 +82,6 @@ void display(void)
 	glTranslatef(-6.5,6,-9.0f); // move camera out and center on the cloth
 	glRotatef(25,0,1,0); // rotate a bit to see the cloth from the side
 	cloth1.drawShaded(); // finally draw the cloth with smooth shading
-	
-	glPushMatrix(); // to draw the ball we use glutSolidSphere, and need to draw the sphere at the position of the ball
-	glTranslatef(ball_pos.f[0],ball_pos.f[1],ball_pos.f[2]); // hence the translation of the sphere onto the ball position
-	glColor3f(0.4f,0.8f,0.5f);
-	glutSolidSphere(ball_radius-0.1,50,50); // draw the ball, but with a slightly lower radius, otherwise we could get ugly visual artifacts of cloth penetrating the ball slightly
-	glPopMatrix();
 
 	glutSwapBuffers();
 	glutPostRedisplay();
@@ -122,7 +108,7 @@ int main ( int argc, char** argv )
 	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH ); 
 	glutInitWindowSize(1280, 720 ); 
 
-	glutCreateWindow( "Cloth Tutorial from cg.alexandra.dk" );
+	glutCreateWindow( "Fast Cloth Simulator" );
 	init();
 	glutDisplayFunc(display);  
 	glutReshapeFunc(reshape);

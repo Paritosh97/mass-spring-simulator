@@ -31,7 +31,6 @@ class Cloth:
         self.width = width
         self.height = height
         self.no_of_particles = width * height
-
         self.springs = []
         self.particles = [Particle(np.zeros(self.no_of_particles, float)) for x in range(self.no_of_particles)]
 
@@ -111,7 +110,7 @@ class Cloth:
 
         return scipy.sparse.kron(j, np.eye(self.ndim, self.ndim), format='csc')
 
-    def update_d(self):
+    def global_step(self):
         # Updates the spring lengths to optimal rest length values while keeping their directions
 
         def normalized(a):
@@ -125,10 +124,22 @@ class Cloth:
         for i in range(self.no_of_springs):
             r.append(self.springs[i].r)
 
-        # Compute the directions of springs using the current position of the particles
-        self.d[:] = (r * normalized(self.particles[self.springs.n[1]].position - self.particles[self.springs.n[1]].position)).reshape(-1, 1)
+        r = np.asarray(r)
 
-    def update_x(self):
+        pi1 = np.empty((self.no_of_springs, self.ndim), float)
+        pi2 = np.empty((self.no_of_springs, self.ndim), float)
+
+        for spring in range(0, self.no_of_springs):
+            for axis in range(0, self.ndim):
+                pi1[spring][axis] = self.particles[self.springs[spring].n[0]].position[axis]
+                pi2[spring][axis] = self.particles[self.springs[spring].n[1]].position[axis]
+
+        p = normalized(pi2 - pi1)
+
+        # Compute the directions of springs using the current position of the particles
+        self.d[:] = (r[0] * p).reshape(-1, 1)
+
+    def local_step(self):
         # Computes new particles positions by solving Ax=b
 
         # Update the right hand side.
@@ -150,22 +161,24 @@ class Cloth:
 
         # Copy back
         for particle in range(0, self.no_of_particles):
-            self.particles[particle].position = pos[particle]
-            self.particles[particle].lastPosition = last_pos[particle]
+            if not self.particles[particle].pinned:
+                self.particles[particle].position = pos[particle]
+                self.particles[particle].lastPosition = last_pos[particle]
 
-    def update(self, iterations):
-        for _ in range(iterations):
-            self.update_d()
-            self.update_x()
+    def update(self):
+        self.global_step()
+        self.local_step()
 
 
 class HelloWorldWindow(pyglet.window.Window):
 
     def __init__(self):
         super(HelloWorldWindow, self).__init__()
-        self.cloth = Cloth(10, 10, 1, 1, 0.016)
+        self.cloth = Cloth(10, 10, 1, 10, 0.016)
         self.points = self.cloth.particles
         self.links = self.cloth.springs
+        self.x = 150
+        self.y = 150
         self.set_size(400, 400)
 
     def drawPoint(self, x, y, color):
@@ -204,7 +217,7 @@ class HelloWorldWindow(pyglet.window.Window):
         self.clear()
         self.drawNet(self.points)
 
-        self.cloth.update(50)
+        self.cloth.update()
 
 
 if __name__ == '__main__':

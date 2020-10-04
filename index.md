@@ -38,7 +38,7 @@
 [TODO Small Description]
 
 ### Demo
-[Demo](./semi-implicit-euler/semi-implicit-euler.html)
+[Demo](./semi-implicit-euler/semi-implicit-euler.html){:target="_blank" rel="noopener"}
 
 ## Corotated linear, Block Coordinate Descent, etc.
 Coming Soon!

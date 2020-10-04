@@ -6,7 +6,7 @@
 [TODO Small Description]
 
 ### Demo
-[Demo](./verlet/verlet.html)
+[Demo](./verlet/verlet.html){:target="_blank" rel="noopener"}
 
 ## Position Based Dynamics
 
@@ -14,7 +14,7 @@
 [TODO Small Description]
 
 ### Demo
-[Demo](./position-based-dynamics/position-based-dynamics.html)
+[Demo](./position-based-dynamics/position-based-dynamics.html){:target="_blank" rel="noopener"}
 
 ## Explicit Euler
 
@@ -22,7 +22,7 @@
 [TODO Small Description]
 
 ### Demo
-[Demo](./explicit-euler/explicit-euler.html)
+[Demo](./explicit-euler/explicit-euler.html){:target="_blank" rel="noopener"}
 
 ## Implicit Euler
 
@@ -30,7 +30,7 @@
 [TODO Small Description]
 
 ### Demo
-[Demo](./implicit-euler/implicit-euler.html)
+[Demo](./implicit-euler/implicit-euler.html){:target="_blank" rel="noopener"}
 
 ## Semi Implicit Euler
 

@@ -45,6 +45,7 @@
 		springs=new Array();
 		F=new Array();
 		V=new Array();
+		tmp_X = new Array();
 		var numX = 20;
 		var numY = 20;
 		var pickedPoint = -1;
@@ -52,6 +53,7 @@
 		GRAVITY=new THREE.Vector3(0,-9.8,0);
 		mass = 1;
 		dt =  1.0/60;
+		var global_dampening = 0.98;
 
 		init();
 		animate();
@@ -325,23 +327,161 @@
 			}
 		}
 
-		function integrateEuler()
+		function integrateExplicitWithDamping()
 		{
-			var deltaTimeMass = dt/ mass;
+			var N = mesh.geometry.vertices.length;
+
+			var Xcm = new Array();
+			var Vcm = new Array();
+			var sumM = 0;
+
+			for(var i=0;i<N;i++)
+			{
+				V[i] *= global_dampening; //global velocity dampening !!!		
+				V[i] = V[i] + (F[i]*deltaTime)*W[i]; 	 					
+				
+				//calculate the center of mass's position 
+				//and velocity for damping calc
+				Xcm += (X[i]*mass);
+				Vcm += (V[i]*mass);
+				sumM += mass;
+			}
+		
+			Xcm /= sumM; 
+			Vcm /= sumM; 
+
+			var I = new Array(new Array());
+			var L = new Array();
+			var w = new Array();
+			
+			for(var i=0;i<N;i++)
+			{
+				Ri[i] = (mesh.geometry.vertices[i] - Xcm);	
+				
+				L += glm::cross(Ri[i],mass*V[i]); 
+
+				var tmp = glm::mat3(0,-Ri[i].z,  Ri[i].y, 
+									Ri[i].z,       0,-Ri[i].x,
+									-Ri[i].y,Ri[i].x,        0);
+				I +=(tmp*glm::transpose(tmp))*mass;
+			}
+			
+			w = glm::inverse(I)*L;
+			
+			for(var i=0;i<N;i++)
+			{
+				glm::vec3 delVi = Vcm + glm::cross(w,Ri[i])-V[i];		
+				V[i] += kDamp*delVi;
+			}
+
+			for(var i=0;i<N;i++)
+			{
+				if(W[i] <= 0.0)
+				{ 
+					tmp_X[i] = mesh.geometry.vertices[i];
+				}
+				else
+				{
+					tmp_X[i] = mesh.geometry.vertices[i] + (V[i]*dt);				 
+				}
+			}
+		}
+
+		function updateInternalConstraints()
+		{
+			var i = 0, solver_iterations = 2;
+ 
+			for (var si=0;si<solver_iterations;++si)
+			{
+				for(i=0;i<d_constraints.size();i++)
+				{
+					updateDistanceConstraint(i);
+				} 
+				for(i=0;i<b_constraints.size();i++)
+				{
+					updateBendingConstraint(i);
+				}
+				groundCollision();
+			}
+		}
+
+		function updateDistanceConstraint(i)
+		{
+			DistanceConstraint c = d_constraints[i];
+			glm::vec3 dir = tmp_X[c.p1] - tmp_X[c.p2];
+
+			float len = glm::length(dir); 
+			if(len <= EPSILON) 
+				return;
+			
+			float w1 = W[c.p1];
+			float w2 = W[c.p2];
+			float invMass = w1+ w2; 
+			if(invMass <= EPSILON) 
+				return;
+		
+			glm::vec3 dP = (1.0f/invMass) * (len-c.rest_length ) * (dir/len)* c.k_prime;
+			if(w1 > 0.0)
+				tmp_X[c.p1] -= dP*w1;
+
+			if(w2 > 0.0)
+			tmp_X[c.p2] += dP*w2;
+		}
+
+		function updateBendingConstraint(i)
+		{
+			size_t i=0;
+			BendingConstraint c = b_constraints[index]; 
+
+			float global_k = global_dampening*0.01f; 
+			glm::vec3 center = 0.3333f * (tmp_X[c.p1] + tmp_X[c.p2] + tmp_X[c.p3]);
+			glm::vec3 dir_center = tmp_X[c.p3]-center;
+			float dist_center = glm::length(dir_center);
+
+			float diff = 1.0f - ((global_k + c.rest_length) / dist_center);
+			glm::vec3 dir_force = dir_center * diff;
+			glm::vec3 fa = c.k_prime * ((2.0f*W[c.p1])/c.w) * dir_force;
+			glm::vec3 fb = c.k_prime * ((2.0f*W[c.p2])/c.w) * dir_force;
+			glm::vec3 fc = -c.k_prime * ((4.0f*W[c.p3])/c.w) * dir_force;
+
+			if(W[c.p1] > 0.0) 
+			{
+				tmp_X[c.p1] += fa;
+			}
+			if(W[c.p2] > 0.0)
+			{
+				tmp_X[c.p2] += fb;
+			}
+			if(W[c.p3] > 0.0)
+			{
+				tmp_X[c.p3] += fc;
+			}
+		}
+
+		function groundCollision()
+		{
+			var N = mesh.geometry.vertices.length;
+
+			for(var i=0;i<N;i++)
+			{
+				if(tmp_X[i].y < 0)
+				{
+					tmp_X[i].y = 0;
+				}
+			}			
+		}
+
+		function integrate()
+		{
+			var inv_dt = 1.0/deltaTime;
 			var N = mesh.geometry.vertices.length;
 			var oldP = mesh.geometry.vertices[N-1].clone(); 
 			mesh.geometry.verticesNeedUpdate = true;
 			for(var i=0;i<N;i++)
 			{
-				var oldV = V[i];
+				V[i] = (tmp_X[i] - mesh.geometry.vertices[i]).multiplyScalar(inv_dt);
 
-				V[i].add(F[i].multiplyScalar(deltaTimeMass));
-				mesh.geometry.vertices[i].add(oldV.multiplyScalar(dt));
-
-				if(mesh.geometry.vertices[i].y < 0)
-				{
-					mesh.geometry.vertices[i].y = 0;
-				}
+				mesh.geometry.vertices[i] = tmp_X[i];
 			}
 
 			var diff = new THREE.Vector3(0,0,0);
@@ -353,7 +493,9 @@
 		function doPhysics()
 		{
 			computeForces();
-			integrateEuler();
+			integrateExplicitWithDamping();
+			updateInternalConstraints();	
+			integrate();
 		}
 
 		function animate()

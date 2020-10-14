@@ -326,28 +326,58 @@
 		}
 
 		function integrateEuler()
-		{
-			var deltaTimeMass = dt/ mass;
+		{			
 			var N = mesh.geometry.vertices.length;
-			var oldP = mesh.geometry.vertices[N-1].clone(); 
+			var oldP = mesh.geometry.vertices[N-1].clone();
 			mesh.geometry.verticesNeedUpdate = true;
+
+			var deltaT2 = dt*dt;
+			var A = M - deltaT2* K;
+			var b = M*V + dt*F;
+			var V_new = solveConjugateGradient(A, b);
+			
 			for(var i=0;i<N;i++)
 			{
-				var oldV = V[i];
-
-				V[i].add(F[i].multiplyScalar(deltaTimeMass));
-				mesh.geometry.vertices[i].add(oldV.multiplyScalar(dt));
-
+				mesh.geometry.vertices[i].add(V_new.multiplyScalar(dt));
+				
 				if(mesh.geometry.vertices[i].y < 0)
 				{
 					mesh.geometry.vertices[i].y = 0;
 				}
+
+				V[i] = V_new[i];
 			}
 
 			var diff = new THREE.Vector3(0,0,0);
 			diff.subVectors(oldP, mesh.geometry.vertices[N - 1]);
 
 			simulate = (diff.lengthSq()> EPSILON2);
+		}
+
+		function solveConjugateGradient(A, b)
+		{
+			var i =0;
+			var r = b - A*x;
+			var d = r;
+			var q;
+			var alpha_new = 0;
+			var alpha = 0;
+			var beta  = 0;
+			var delta_old = 0;
+			var delta_new = dot(r,r);
+			var delta0    = delta_new;
+			while(i<i_max && delta_new> EPSILON2)
+			{
+				q = A*d;
+				alpha = delta_new/dot(d,q);
+				x = x + alpha*d;
+				r = r - alpha*q;
+				delta_old = delta_new;
+				delta_new = dot(r,r);
+				beta = delta_new/delta_old;
+				d = r + beta*d;
+				i++;
+			}			
 		}
 
 		function doPhysics()

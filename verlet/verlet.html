@@ -45,6 +45,7 @@
 		springs=new Array();
 		F=new Array();
 		V=new Array();
+		X_last = new Array();
 		var numX = 20;
 		var numY = 20;
 		var pickedPoint = -1;
@@ -325,18 +326,22 @@
 			}
 		}
 
-		function integrateEuler()
+		function integrateVerlet()
 		{
-			var deltaTimeMass = dt/ mass;
+			var deltaTime2Mass = (dt*dt)/ mass;
 			var N = mesh.geometry.vertices.length;
 			var oldP = mesh.geometry.vertices[N-1].clone(); 
 			mesh.geometry.verticesNeedUpdate = true;
+			
 			for(var i=0;i<N;i++)
 			{
-				var oldV = V[i];
+				var buffer = mesh.geometry.vertices[i];
 
-				V[i].add(F[i].multiplyScalar(deltaTimeMass));
-				mesh.geometry.vertices[i].add(oldV.multiplyScalar(dt));
+				mesh.geometry.vertices[i].add(mesh.geometry.vertices[i]);
+				mesh.geometry.vertices[i].sub(X_last[i]);
+				mesh.geometry.vertices[i].add(F[i].multiplyScalar(deltaTimeMass));
+		
+				X_last[i] = buffer;
 
 				if(mesh.geometry.vertices[i].y < 0)
 				{
@@ -353,7 +358,7 @@
 		function doPhysics()
 		{
 			computeForces();
-			integrateEuler();
+			integrateVerlet();
 		}
 
 		function animate()

@@ -325,7 +325,7 @@
 			}
 		}
 
-		function integrateEuler()
+		function integrateSemiImplicit()
 		{
 			var deltaTimeMass = dt/ mass;
 			var N = mesh.geometry.vertices.length;
@@ -333,10 +333,8 @@
 			mesh.geometry.verticesNeedUpdate = true;
 			for(var i=0;i<N;i++)
 			{
-				var oldV = V[i];
-
 				V[i].add(F[i].multiplyScalar(deltaTimeMass));
-				mesh.geometry.vertices[i].add(oldV.multiplyScalar(dt));
+				mesh.geometry.vertices[i].add(V[i].multiplyScalar(dt));
 
 				if(mesh.geometry.vertices[i].y < 0)
 				{
@@ -353,7 +351,7 @@
 		function doPhysics()
 		{
 			computeForces();
-			integrateEuler();
+			integrateSemiImplicit();
 		}
 
 		function animate()
